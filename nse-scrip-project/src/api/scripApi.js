@@ -30,14 +30,9 @@ async function getJson(url, options = {}) {
 
 
 export async function getMaster() {
-
-    const json =
-        await getJson(
-            `${API_BASE_URL}/master`
-        );
-
+    const response = await fetch(`${API_BASE_URL}/master`);
+    const json = await response.json();
     return json.data || [];
-
 }
 
 
