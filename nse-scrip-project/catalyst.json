@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "targets": [
+      "tier1_pipeline",
+      "api"
+    ]
+  },
+  "cron": [
+    {
+      "cron_name": "daily_nse_scrip_sync",
+      "cron_type": "Calendar",
+      "cron_expression": "30 6 ? * MON-FRI *",
+      "target_type": "Function",
+      "target_name": "tier1_pipeline"
+    }
+  ],
+  "client": {
+    "source": "dist"
+  }
+}
