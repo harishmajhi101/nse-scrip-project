@@ -1,7 +1,7 @@
 // export const API_BASE_URL =
     // 'https://nse-scrip-master-auto-update-60089696477.development.catalystserverless.in/api';
 
-    const CATALYST_API =
+const CATALYST_API =
     'https://nse-scrip-master-auto-update-60089696477.development.catalystserverless.in';
 
 const isLocal =
