@@ -1,131 +1,115 @@
-const API_BASE_URL =
-    import.meta.env.VITE_SCRIP_API_URL;
+const API_BASE_URL = '/api';
 
+async function getJson(endpoint, options = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
 
-async function getJson(url, options = {}) {
+    console.log('API REQUEST:', url);
 
-    const response =
-        await fetch(url, options);
+    const response = await fetch(url, options);
 
+    console.log('API STATUS:', response.status);
 
-    const json =
-        await response.json()
-            .catch(() => ({}));
+    const text = await response.text();
 
+    let data = {};
 
-    if (!response.ok) {
-
-        throw new Error(
-            json?.message ||
-            json?.error ||
-            `Request failed: ${response.status}`
-        );
-
+    try {
+        data = text ? JSON.parse(text) : {};
+    } catch {
+        throw new Error('Invalid response from API');
     }
 
+    if (!response.ok) {
+        throw new Error(
+            data?.message ||
+            data?.error ||
+            `Request failed: ${response.status}`
+        );
+    }
 
-    return json;
-
+    return data;
 }
 
+
+// =========================
+// MASTER
+// =========================
 
 export async function getMaster() {
-
-    const json =
-        await getJson(
-            `${API_BASE_URL}/master`
-        );
-
-    return json.data || [];
-
+    const response = await getJson('/master');
+    return response.data || [];
 }
 
+
+// =========================
+// STAGING
+// =========================
 
 export async function getStaging() {
-
-    const json =
-        await getJson(
-            `${API_BASE_URL}/staging`
-        );
-
-    return json.data || [];
-
+    const response = await getJson('/staging');
+    return response.data || [];
 }
 
+
+// =========================
+// HISTORY
+// =========================
 
 export async function getHistory() {
-
-    const json =
-        await getJson(
-            `${API_BASE_URL}/history`
-        );
-
-    return json.data || [];
-
+    const response = await getJson('/history');
+    return response.data || [];
 }
 
+
+// =========================
+// HEALTH
+// =========================
 
 export async function checkHealth() {
-
-    return getJson(
-        `${API_BASE_URL}/health`
-    );
-
+    return getJson('/health');
 }
 
+
+// =========================
+// TIER 1
+// =========================
 
 export async function runTier1() {
-
-    return getJson(
-        `${API_BASE_URL}/tier1/run`,
-        {
-            method: 'POST',
-
-            headers: {
-                'Content-Type':
-                    'application/json'
-            },
-
-            body: JSON.stringify({})
-        }
-    );
-
+    return getJson('/tier1/run', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    });
 }
 
+
+// =========================
+// CREATE STAGING
+// =========================
 
 export async function createStaging(data) {
-
-    return getJson(
-        `${API_BASE_URL}/staging`,
-        {
-            method: 'POST',
-
-            headers: {
-                'Content-Type':
-                    'application/json'
-            },
-
-            body: JSON.stringify(data)
-        }
-    );
-
+    return getJson('/staging', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    });
 }
 
 
+// =========================
+// CREATE MASTER
+// =========================
+
 export async function createMaster(data) {
-
-    return getJson(
-        `${API_BASE_URL}/master`,
-        {
-            method: 'POST',
-
-            headers: {
-                'Content-Type':
-                    'application/json'
-            },
-
-            body: JSON.stringify(data)
-        }
-    );
-
+    return getJson('/master', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    });
 }

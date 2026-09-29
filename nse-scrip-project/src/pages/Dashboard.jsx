@@ -9,7 +9,6 @@ import {
     createMaster
 } from '../api/scripApi';
 
-
 export default function Dashboard() {
 
     // ==================================================
@@ -19,7 +18,6 @@ export default function Dashboard() {
     const [master, setMaster] = useState([]);
     const [staging, setStaging] = useState([]);
     const [history, setHistory] = useState([]);
-
 
     // ==================================================
     // PAGE STATE
@@ -31,310 +29,277 @@ export default function Dashboard() {
     const [runResult, setRunResult] = useState(null);
     const [error, setError] = useState('');
 
-
     // ==================================================
     // MODAL STATE
     // ==================================================
 
-    const [showStagingForm, setShowStagingForm] =
-        useState(false);
-
-    const [showMasterForm, setShowMasterForm] =
-        useState(false);
-
-    const [formLoading, setFormLoading] =
-        useState(false);
-
+    const [showStagingForm, setShowStagingForm] = useState(false);
+    const [showMasterForm, setShowMasterForm] = useState(false);
+    const [formLoading, setFormLoading] = useState(false);
 
     // ==================================================
     // STAGING FORM
     // ==================================================
 
-
-const [stagingForm, setStagingForm] = useState({
-    ISIN: '',
-    Company_Name: '',
-    Symbol: '',
-    Series: 'EQ',
-    Source_File: ''
-});
-
+    const [stagingForm, setStagingForm] = useState({
+        ISIN: '',
+        Company_Name: '',
+        Symbol: '',
+        Series: 'EQ',
+        Source_File: ''
+    });
 
     // ==================================================
     // MASTER FORM
     // ==================================================
 
     const [masterForm, setMasterForm] = useState({
-
         ISIN: '',
-
         Company_Name: '',
-
         Symbol: '',
-
         Series: 'EQ',
-
         Status: ''
-
     });
-
 
     // ==================================================
     // LOAD DASHBOARD
     // ==================================================
 
     useEffect(() => {
-
         loadDashboard();
-
     }, []);
 
-
     async function loadDashboard() {
-
         try {
-
             setLoading(true);
-
             setError('');
 
+            // Load Master
+            console.log('Loading Master...');
+            const masterResponse = await getMaster();
+            console.log('Master response:', masterResponse);
 
-            const [
-                masterResponse,
-                stagingResponse,
-                historyResponse
-            ] = await Promise.all([
+            setMaster(masterResponse || []);
 
-                getMaster(),
+            // Load Staging
+            console.log('Loading Staging...');
+            const stagingResponse = await getStaging();
+            console.log('Staging response:', stagingResponse);
 
-                getStaging(),
+            setStaging(stagingResponse || []);
 
-                getHistory()
+            // Load History
+            console.log('Loading History...');
+            const historyResponse = await getHistory();
+            console.log('History response:', historyResponse);
 
-            ]);
-
-
-            // API functions already return arrays
-
-            setMaster(
-                masterResponse || []
-            );
-
-            setStaging(
-                stagingResponse || []
-            );
-
-            setHistory(
-                historyResponse || []
-            );
-
+            setHistory(historyResponse || []);
 
         } catch (error) {
-
-            console.error(
-                'Dashboard loading error:',
-                error
-            );
-
+            console.error('Dashboard loading error:', error);
 
             setError(
-                error.message ||
-                'Unable to load dashboard'
+                error.message || 'Unable to load dashboard'
             );
-
-
         } finally {
-
             setLoading(false);
-
         }
-
     }
-
 
     // ==================================================
     // RUN TIER 1
     // ==================================================
 
     async function handleRunTier1() {
-
         try {
-
             setRunning(true);
-
             setError('');
-
             setRunResult(null);
 
+            console.log('Starting Tier 1...');
 
-            const response =
-                await runTier1();
+            const response = await runTier1();
 
-
-            console.log(
-                'Tier 1 response:',
-                response
-            );
-
+            console.log('Tier 1 response:', response);
 
             setRunResult(response);
 
-
             // Refresh dashboard
-
             await loadDashboard();
 
-
         } catch (error) {
-
             console.error(
                 'Tier 1 execution error:',
                 error
             );
 
-
             setError(
                 error.message ||
                 'Tier 1 execution failed'
             );
-
-
         } finally {
-
             setRunning(false);
-
         }
-
     }
 
     // ==================================================
     // CREATE STAGING
     // ==================================================
+
     async function handleCreateStaging(event) {
-    event.preventDefault();
+        event.preventDefault();
 
-    try {
-        setFormLoading(true);
-        setError('');
+        try {
+            setFormLoading(true);
+            setError('');
 
-        const response = await createStaging({
-            ISIN: stagingForm.ISIN.trim(),
-            Company_Name: stagingForm.Company_Name.trim(),
-            Symbol: stagingForm.Symbol.trim(),
-            Series: stagingForm.Series,
-            Source_File: stagingForm.Source_File.trim() || ' '
-        });
+            const payload = {
+                ISIN: stagingForm.ISIN.trim(),
+                Company_Name: stagingForm.Company_Name.trim(),
+                Symbol: stagingForm.Symbol.trim(),
+                Series: stagingForm.Series,
+                Source_File:
+                    stagingForm.Source_File.trim() ||
+                    'manual'
+            };
 
-        if (!response?.success) {
-            throw new Error(
-                response?.message || 'Failed to create staging record'
+            console.log(
+                'Creating staging record:',
+                payload
             );
+
+            const response = await createStaging(payload);
+
+            console.log(
+                'Create Staging response:',
+                response
+            );
+
+            if (!response?.success) {
+                throw new Error(
+                    response?.message ||
+                    'Failed to create staging record'
+                );
+            }
+
+            // Close modal
+            setShowStagingForm(false);
+
+            // Reset form
+            setStagingForm({
+                ISIN: '',
+                Company_Name: '',
+                Symbol: '',
+                Series: 'EQ',
+                Source_File: ''
+            });
+
+            // Reload dashboard
+            await loadDashboard();
+
+        } catch (error) {
+            console.error(
+                'Create Staging error:',
+                error
+            );
+
+            setError(
+                error.message ||
+                'Failed to create staging record'
+            );
+        } finally {
+            setFormLoading(false);
         }
-
-        setShowStagingForm(false);
-
-        setStagingForm({
-            ISIN: '',
-            Company_Name: '',
-            Symbol: '',
-            Series: 'EQ',
-            Source_File: ''
-        });
-
-        await loadDashboard();
-
-    } catch (error) {
-        console.error('Create Staging error:', error);
-        setError(error.message || 'Failed to create staging record');
-    } finally {
-        setFormLoading(false);
     }
-}
-// ==================================================
-    // CREATE master
+
+    // ==================================================
+    // CREATE MASTER
     // ==================================================
 
-   async function handleCreateMaster(event) {
-    event.preventDefault();
+    async function handleCreateMaster(event) {
+        event.preventDefault();
 
-    try {
-        setFormLoading(true);
-        setError('');
+        try {
+            setFormLoading(true);
+            setError('');
 
-        console.log('Creating master record:', masterForm);
+            const payload = {
+                ISIN: masterForm.ISIN.trim(),
+                Company_Name: masterForm.Company_Name.trim(),
+                Symbol: masterForm.Symbol.trim(),
+                Series: masterForm.Series,
+                Status: masterForm.Status
+            };
 
-        const response = await createMaster({
-            ISIN: masterForm.ISIN.trim(),
-            Company_Name: masterForm.Company_Name.trim(),
-            Symbol: masterForm.Symbol.trim(),
-            Series: masterForm.Series,
-            Status: masterForm.Status
-        });
-
-        console.log('Create Master response:', response);
-
-        if (!response?.success) {
-            throw new Error(
-                response?.message || 'Failed to create master record'
+            console.log(
+                'Creating master record:',
+                payload
             );
+
+            const response = await createMaster(payload);
+
+            console.log(
+                'Create Master response:',
+                response
+            );
+
+            if (!response?.success) {
+                throw new Error(
+                    response?.message ||
+                    'Failed to create master record'
+                );
+            }
+
+            // Close modal
+            setShowMasterForm(false);
+
+            // Reset form
+            setMasterForm({
+                ISIN: '',
+                Company_Name: '',
+                Symbol: '',
+                Series: 'EQ',
+                Status: ''
+            });
+
+            // Reload dashboard
+            await loadDashboard();
+
+        } catch (error) {
+            console.error(
+                'Create Master error:',
+                error
+            );
+
+            setError(
+                error.message ||
+                'Failed to create master record'
+            );
+        } finally {
+            setFormLoading(false);
         }
-
-        // Close modal
-        setShowMasterForm(false);
-
-        // Reset form
-        setMasterForm({
-            ISIN: '',
-            Company_Name: '',
-            Symbol: '',
-            Series: 'EQ',
-            Status: ''
-        });
-
-        // Reload dashboard data
-        await loadDashboard();
-
-    } catch (error) {
-        console.error('Create Master error:', error);
-
-        setError(
-            error.message || 'Failed to create master record'
-        );
-
-    } finally {
-        setFormLoading(false);
     }
-}
-
 
     // ==================================================
     // STATISTICS
     // ==================================================
 
-    const activeRecords =
-        master.filter(
-            item =>
-                item.Status?.toLowerCase() ===
-                'active'
-        ).length;
+    const activeRecords = master.filter(
+        item =>
+            item.Status?.toLowerCase() === 'active'
+    ).length;
 
-
-    const unresolvedRecords =
-        master.filter(
-            item =>
-                item.Status?.toLowerCase() ===
-                'unresolved'
-        ).length;
-
+    const unresolvedRecords = master.filter(
+        item =>
+            item.Status?.toLowerCase() === 'unresolved'
+    ).length;
 
     // ==================================================
     // PAGE
     // ==================================================
 
     return (
-
         <div className="page">
-
 
             {/* ==================================================
                 PAGE HEADER
@@ -343,30 +308,24 @@ const [stagingForm, setStagingForm] = useState({
             <div className="page-header">
 
                 <div>
-
                     <div className="eyebrow">
                         OVERVIEW
                     </div>
 
-
                     <h1>
                         Scrip Master Dashboard
                     </h1>
-
 
                     <p>
                         Monitor NSE scrip data,
                         staging records and Tier 1
                         updates.
                     </p>
-
                 </div>
-
 
                 {/* HEADER BUTTONS */}
 
                 <div className="header-actions">
-
 
                     {/* ADD STAGING */}
 
@@ -381,7 +340,6 @@ const [stagingForm, setStagingForm] = useState({
                         + Add Staging
                     </button>
 
-
                     {/* ADD MASTER */}
 
                     <button
@@ -395,7 +353,6 @@ const [stagingForm, setStagingForm] = useState({
                         + Add Master
                     </button>
 
-
                     {/* RUN TIER 1 */}
 
                     <button
@@ -404,48 +361,36 @@ const [stagingForm, setStagingForm] = useState({
                         onClick={handleRunTier1}
                         disabled={running}
                     >
-
                         <span className="button-icon">
                             ↻
                         </span>
 
-
                         {running
                             ? 'Running...'
                             : 'Run Tier 1'}
-
                     </button>
 
                 </div>
-
             </div>
-
 
             {/* ==================================================
                 ERROR MESSAGE
             ================================================== */}
 
             {error && (
-
                 <div className="alert alert-error">
-
                     <strong>
                         Error:
                     </strong>{' '}
-
                     {error}
-
                 </div>
-
             )}
-
 
             {/* ==================================================
                 STATISTICS
             ================================================== */}
 
             <div className="stats-grid">
-
 
                 {/* MASTER RECORDS */}
 
@@ -457,29 +402,23 @@ const [stagingForm, setStagingForm] = useState({
                             MASTER RECORDS
                         </div>
 
-
                         <div className="stat-icon blue">
                             ▦
                         </div>
 
                     </div>
 
-
                     <div className="stat-value">
-
                         {loading
                             ? '—'
                             : master.length}
-
                     </div>
-
 
                     <div className="stat-description">
                         Total scrip records
                     </div>
 
                 </div>
-
 
                 {/* ACTIVE */}
 
@@ -491,29 +430,23 @@ const [stagingForm, setStagingForm] = useState({
                             ACTIVE
                         </div>
 
-
                         <div className="stat-icon green">
                             ✓
                         </div>
 
                     </div>
 
-
                     <div className="stat-value">
-
                         {loading
                             ? '—'
                             : activeRecords}
-
                     </div>
-
 
                     <div className="stat-description">
                         Active securities
                     </div>
 
                 </div>
-
 
                 {/* STAGING */}
 
@@ -525,29 +458,23 @@ const [stagingForm, setStagingForm] = useState({
                             STAGING
                         </div>
 
-
                         <div className="stat-icon purple">
                             ▤
                         </div>
 
                     </div>
 
-
                     <div className="stat-value">
-
                         {loading
                             ? '—'
                             : staging.length}
-
                     </div>
-
 
                     <div className="stat-description">
                         Current NSE records
                     </div>
 
                 </div>
-
 
                 {/* UNRESOLVED */}
 
@@ -559,22 +486,17 @@ const [stagingForm, setStagingForm] = useState({
                             UNRESOLVED
                         </div>
 
-
                         <div className="stat-icon orange">
                             !
                         </div>
 
                     </div>
 
-
                     <div className="stat-value">
-
                         {loading
                             ? '—'
                             : unresolvedRecords}
-
                     </div>
-
 
                     <div className="stat-description">
                         Need attention
@@ -584,13 +506,11 @@ const [stagingForm, setStagingForm] = useState({
 
             </div>
 
-
             {/* ==================================================
                 LATEST TIER 1 RUN
             ================================================== */}
 
             {runResult && (
-
                 <div className="panel">
 
                     <div className="panel-header">
@@ -601,16 +521,12 @@ const [stagingForm, setStagingForm] = useState({
                                 Latest Tier 1 Run
                             </h2>
 
-
                             <p>
-
                                 {runResult.summary?.runId ||
                                     'Run completed'}
-
                             </p>
 
                         </div>
-
 
                         <span className="badge badge-success">
                             Completed
@@ -618,141 +534,63 @@ const [stagingForm, setStagingForm] = useState({
 
                     </div>
 
-
-                    {/* RUN SUMMARY */}
-
                     <div className="run-summary-grid">
 
-
-                        {/* TOTAL */}
-
                         <div>
-
-                            <span>
-                                Total
-                            </span>
-
+                            <span>Total</span>
 
                             <strong>
-
-                                {
-                                    runResult.summary
-                                        ?.totalStaging ?? 0
-                                }
-
+                                {runResult.summary
+                                    ?.totalStaging ?? 0}
                             </strong>
-
                         </div>
 
-
-                        {/* MATCHED */}
-
                         <div>
-
-                            <span>
-                                Matched
-                            </span>
-
+                            <span>Matched</span>
 
                             <strong>
-
-                                {
-                                    runResult.summary
-                                        ?.matched ?? 0
-                                }
-
+                                {runResult.summary
+                                    ?.matched ?? 0}
                             </strong>
-
                         </div>
 
-
-                        {/* UPDATED */}
-
                         <div>
-
-                            <span>
-                                Updated
-                            </span>
-
+                            <span>Updated</span>
 
                             <strong>
-
-                                {
-                                    runResult.summary
-                                        ?.updated ?? 0
-                                }
-
+                                {runResult.summary
+                                    ?.updated ?? 0}
                             </strong>
-
                         </div>
 
-
-                        {/* UNMATCHED */}
-
                         <div>
-
-                            <span>
-                                Unmatched
-                            </span>
-
+                            <span>Unmatched</span>
 
                             <strong>
-
-                                {
-                                    runResult.summary
-                                        ?.unmatched ?? 0
-                                }
-
+                                {runResult.summary
+                                    ?.unmatched ?? 0}
                             </strong>
-
                         </div>
 
-
-                        {/* UNCHANGED */}
-
                         <div>
-
-                            <span>
-                                Unchanged
-                            </span>
-
+                            <span>Unchanged</span>
 
                             <strong>
-
-                                {
-                                    runResult.summary
-                                        ?.unchanged ?? 0
-                                }
-
+                                {runResult.summary
+                                    ?.unchanged ?? 0}
                             </strong>
-
                         </div>
 
-
-                        {/* ERRORS */}
-
                         <div>
-
-                            <span>
-                                Errors
-                            </span>
-
+                            <span>Errors</span>
 
                             <strong className="danger-text">
-
-                                {
-                                    runResult.summary
-                                        ?.errors ?? 0
-                                }
-
+                                {runResult.summary
+                                    ?.errors ?? 0}
                             </strong>
-
                         </div>
 
                     </div>
-
-
-                    {/* TIER 1 ERRORS */}
 
                     {runResult.summary?.errorDetails?.length > 0 && (
 
@@ -761,7 +599,6 @@ const [stagingForm, setStagingForm] = useState({
                             <h3>
                                 Tier 1 Errors
                             </h3>
-
 
                             {runResult.summary.errorDetails.map(
                                 (item, index) => (
@@ -772,20 +609,14 @@ const [stagingForm, setStagingForm] = useState({
                                     >
 
                                         <div className="error-isin">
-
                                             ISIN:{' '}
-
                                             {item.ISIN ||
                                                 'Unknown'}
-
                                         </div>
 
-
                                         <div className="error-message">
-
                                             {item.error ||
                                                 'Unknown error'}
-
                                         </div>
 
                                     </div>
@@ -798,9 +629,7 @@ const [stagingForm, setStagingForm] = useState({
                     )}
 
                 </div>
-
             )}
-
 
             {/* ==================================================
                 RECENT CHANGES
@@ -816,7 +645,6 @@ const [stagingForm, setStagingForm] = useState({
                             Recent Changes
                         </h2>
 
-
                         <p>
                             Latest master field updates
                         </p>
@@ -824,7 +652,6 @@ const [stagingForm, setStagingForm] = useState({
                     </div>
 
                 </div>
-
 
                 {history.length === 0 ? (
 
@@ -834,11 +661,9 @@ const [stagingForm, setStagingForm] = useState({
                             ◷
                         </div>
 
-
                         <h3>
                             No changes yet
                         </h3>
-
 
                         <p>
                             Tier 1 changes will appear
@@ -857,96 +682,55 @@ const [stagingForm, setStagingForm] = useState({
 
                                 <tr>
 
-                                    <th>
-                                        ISIN
-                                    </th>
-
-                                    <th>
-                                        FIELD
-                                    </th>
-
-                                    <th>
-                                        OLD VALUE
-                                    </th>
-
-                                    <th>
-                                        NEW VALUE
-                                    </th>
-
-                                    <th>
-                                        SOURCE
-                                    </th>
+                                    <th>ISIN</th>
+                                    <th>FIELD</th>
+                                    <th>OLD VALUE</th>
+                                    <th>NEW VALUE</th>
+                                    <th>SOURCE</th>
 
                                 </tr>
 
                             </thead>
 
-
                             <tbody>
 
                                 {history
                                     .slice(0, 8)
-                                    .map(record => (
+                                    .map((record, index) => (
 
                                         <tr
                                             key={
-                                                record.ROWID
+                                                record.ROWID ||
+                                                record.ISIN ||
+                                                index
                                             }
                                         >
 
                                             <td>
-
                                                 <span className="isin">
-
-                                                    {
-                                                        record.ISIN
-                                                    }
-
+                                                    {record.ISIN}
                                                 </span>
-
                                             </td>
-
 
                                             <td>
-
-                                                {
-                                                    record.Field
-                                                }
-
+                                                {record.Field}
                                             </td>
-
 
                                             <td className="old-value">
-
-                                                {
-                                                    record.Old_Value ||
-                                                    '—'
-                                                }
-
+                                                {record.Old_Value ||
+                                                    '—'}
                                             </td>
-
 
                                             <td className="new-value">
-
-                                                {
-                                                    record.New_Value ||
-                                                    '—'
-                                                }
-
+                                                {record.New_Value ||
+                                                    '—'}
                                             </td>
 
-
                                             <td>
-
                                                 <span className="badge badge-neutral">
-
-                                                    {
-                                                        record.Source ||
-                                                        'SYSTEM'
-                                                    }
-
+                                                    {record.Source ||
+                                                        'SYSTEM'}
                                                 </span>
-
                                             </td>
 
                                         </tr>
@@ -962,7 +746,6 @@ const [stagingForm, setStagingForm] = useState({
                 )}
 
             </div>
-
 
             {/* ==================================================
                 ADD STAGING MODAL
@@ -982,14 +765,12 @@ const [stagingForm, setStagingForm] = useState({
                                     Add Staging Record
                                 </h2>
 
-
                                 <p>
                                     Manually add a record
                                     to scrip_staging.
                                 </p>
 
                             </div>
-
 
                             <button
                                 type="button"
@@ -1003,15 +784,9 @@ const [stagingForm, setStagingForm] = useState({
 
                         </div>
 
-
-                        <form
-                            onSubmit={
-                                handleCreateStaging
-                            }
-                        >
+                        <form onSubmit={handleCreateStaging}>
 
                             <div className="form-grid">
-
 
                                 {/* ISIN */}
 
@@ -1021,12 +796,9 @@ const [stagingForm, setStagingForm] = useState({
                                         ISIN
                                     </label>
 
-
                                     <input
                                         type="text"
-                                        value={
-                                            stagingForm.ISIN
-                                        }
+                                        value={stagingForm.ISIN}
                                         onChange={(e) =>
                                             setStagingForm({
                                                 ...stagingForm,
@@ -1041,7 +813,6 @@ const [stagingForm, setStagingForm] = useState({
 
                                 </div>
 
-
                                 {/* SYMBOL */}
 
                                 <div className="form-group">
@@ -1050,12 +821,9 @@ const [stagingForm, setStagingForm] = useState({
                                         Symbol
                                     </label>
 
-
                                     <input
                                         type="text"
-                                        value={
-                                            stagingForm.Symbol
-                                        }
+                                        value={stagingForm.Symbol}
                                         onChange={(e) =>
                                             setStagingForm({
                                                 ...stagingForm,
@@ -1070,7 +838,6 @@ const [stagingForm, setStagingForm] = useState({
 
                                 </div>
 
-
                                 {/* COMPANY NAME */}
 
                                 <div className="form-group">
@@ -1078,7 +845,6 @@ const [stagingForm, setStagingForm] = useState({
                                     <label>
                                         Company Name
                                     </label>
-
 
                                     <input
                                         type="text"
@@ -1098,26 +864,38 @@ const [stagingForm, setStagingForm] = useState({
 
                                 </div>
 
-
                                 {/* SERIES */}
 
                                 <div className="form-group">
-                        <label>Series</label>
-                        <select
-                            value={stagingForm.Series}
-                            onChange={(e) =>
-                                setStagingForm({
-                                    ...stagingForm,
-                                    Series: e.target.value
-                                })
-                            }
-                        >
-                            <option value="EQ">EQ</option>
-                            <option value="BE">BE</option>
-                            <option value="SM">SM</option>
-                        </select>
-                    </div>
 
+                                    <label>
+                                        Series
+                                    </label>
+
+                                    <select
+                                        value={stagingForm.Series}
+                                        onChange={(e) =>
+                                            setStagingForm({
+                                                ...stagingForm,
+                                                Series:
+                                                    e.target.value
+                                            })
+                                        }
+                                    >
+                                        <option value="EQ">
+                                            EQ
+                                        </option>
+
+                                        <option value="BE">
+                                            BE
+                                        </option>
+
+                                        <option value="SM">
+                                            SM
+                                        </option>
+                                    </select>
+
+                                </div>
 
                                 {/* SOURCE FILE */}
 
@@ -1126,7 +904,6 @@ const [stagingForm, setStagingForm] = useState({
                                     <label>
                                         Source File
                                     </label>
-
 
                                     <input
                                         type="text"
@@ -1147,9 +924,6 @@ const [stagingForm, setStagingForm] = useState({
 
                             </div>
 
-
-                            {/* FORM BUTTONS */}
-
                             <div className="modal-actions">
 
                                 <button
@@ -1163,17 +937,14 @@ const [stagingForm, setStagingForm] = useState({
                                     Cancel
                                 </button>
 
-
                                 <button
                                     type="submit"
                                     className="primary-button"
                                     disabled={formLoading}
                                 >
-
                                     {formLoading
                                         ? 'Saving...'
                                         : 'Create Staging'}
-
                                 </button>
 
                             </div>
@@ -1185,7 +956,6 @@ const [stagingForm, setStagingForm] = useState({
                 </div>
 
             )}
-
 
             {/* ==================================================
                 ADD MASTER MODAL
@@ -1205,14 +975,12 @@ const [stagingForm, setStagingForm] = useState({
                                     Add Master Record
                                 </h2>
 
-
                                 <p>
                                     Manually add a record
                                     to scrip_master.
                                 </p>
 
                             </div>
-
 
                             <button
                                 type="button"
@@ -1226,15 +994,9 @@ const [stagingForm, setStagingForm] = useState({
 
                         </div>
 
-
-                        <form
-                            onSubmit={
-                                handleCreateMaster
-                            }
-                        >
+                        <form onSubmit={handleCreateMaster}>
 
                             <div className="form-grid">
-
 
                                 {/* ISIN */}
 
@@ -1244,12 +1006,9 @@ const [stagingForm, setStagingForm] = useState({
                                         ISIN
                                     </label>
 
-
                                     <input
                                         type="text"
-                                        value={
-                                            masterForm.ISIN
-                                        }
+                                        value={masterForm.ISIN}
                                         onChange={(e) =>
                                             setMasterForm({
                                                 ...masterForm,
@@ -1264,7 +1023,6 @@ const [stagingForm, setStagingForm] = useState({
 
                                 </div>
 
-
                                 {/* SYMBOL */}
 
                                 <div className="form-group">
@@ -1273,12 +1031,9 @@ const [stagingForm, setStagingForm] = useState({
                                         Symbol
                                     </label>
 
-
                                     <input
                                         type="text"
-                                        value={
-                                            masterForm.Symbol
-                                        }
+                                        value={masterForm.Symbol}
                                         onChange={(e) =>
                                             setMasterForm({
                                                 ...masterForm,
@@ -1293,7 +1048,6 @@ const [stagingForm, setStagingForm] = useState({
 
                                 </div>
 
-
                                 {/* COMPANY NAME */}
 
                                 <div className="form-group">
@@ -1301,7 +1055,6 @@ const [stagingForm, setStagingForm] = useState({
                                     <label>
                                         Company Name
                                     </label>
-
 
                                     <input
                                         type="text"
@@ -1321,27 +1074,38 @@ const [stagingForm, setStagingForm] = useState({
 
                                 </div>
 
-
                                 {/* SERIES */}
 
                                 <div className="form-group">
-                        <label>Series</label>
-                        <select
-                            value={stagingForm.Series}
-                            onChange={(e) =>
-                                setStagingForm({
-                                    ...stagingForm,
-                                    Series: e.target.value
-                                })
-                            }
-                        >
-                            <option value="EQ">EQ</option>
-                            <option value="BE">BE</option>
-                            <option value="SM">SM</option>
-                            </select>
+
+                                    <label>
+                                        Series
+                                    </label>
+
+                                    <select
+                                        value={masterForm.Series}
+                                        onChange={(e) =>
+                                            setMasterForm({
+                                                ...masterForm,
+                                                Series:
+                                                    e.target.value
+                                            })
+                                        }
+                                    >
+                                        <option value="EQ">
+                                            EQ
+                                        </option>
+
+                                        <option value="BE">
+                                            BE
+                                        </option>
+
+                                        <option value="SM">
+                                            SM
+                                        </option>
+                                    </select>
 
                                 </div>
-
 
                                 {/* STATUS */}
 
@@ -1351,11 +1115,8 @@ const [stagingForm, setStagingForm] = useState({
                                         Status
                                     </label>
 
-
                                     <select
-                                        value={
-                                            masterForm.Status
-                                        }
+                                        value={masterForm.Status}
                                         onChange={(e) =>
                                             setMasterForm({
                                                 ...masterForm,
@@ -1369,16 +1130,13 @@ const [stagingForm, setStagingForm] = useState({
                                             Select status
                                         </option>
 
-
                                         <option value="active">
                                             Active
                                         </option>
 
-
                                         <option value="inactive">
                                             Inactive
                                         </option>
-
 
                                         <option value="unresolved">
                                             Unresolved
@@ -1389,9 +1147,6 @@ const [stagingForm, setStagingForm] = useState({
                                 </div>
 
                             </div>
-
-
-                            {/* FORM BUTTONS */}
 
                             <div className="modal-actions">
 
@@ -1406,17 +1161,14 @@ const [stagingForm, setStagingForm] = useState({
                                     Cancel
                                 </button>
 
-
                                 <button
                                     type="submit"
                                     className="primary-button"
                                     disabled={formLoading}
                                 >
-
                                     {formLoading
                                         ? 'Saving...'
                                         : 'Create Master'}
-
                                 </button>
 
                             </div>
@@ -1430,7 +1182,5 @@ const [stagingForm, setStagingForm] = useState({
             )}
 
         </div>
-
     );
-
 }

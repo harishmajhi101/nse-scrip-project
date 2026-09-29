@@ -1,126 +1,69 @@
-const API_BASE_URL =
-    import.meta.env.VITE_SCRIP_API_URL;
+import { API_BASE_URL } from '../config/apiConfig';
 
+async function getJson(endpoint, options = {}) {
+    const response = await fetch(
+        `${API_BASE_URL}${endpoint}`,
+        options
+    );
 
-async function getJson(url, options = {}) {
-
-    const response =
-        await fetch(url, options);
-
-
-    const json =
-        await response.json()
-            .catch(() => ({}));
-
+    const data = await response.json();
 
     if (!response.ok) {
-
         throw new Error(
-            json?.message ||
-            json?.error ||
+            data?.message ||
+            data?.error ||
             `Request failed: ${response.status}`
         );
-
     }
 
-
-    return json;
-
+    return data;
 }
-
 
 export async function getMaster() {
-    const response = await fetch(`${API_BASE_URL}/master`);
-    const json = await response.json();
-    return json.data || [];
+    const result = await getJson('/master');
+    return result.data || [];
 }
-
 
 export async function getStaging() {
-
-    const json =
-        await getJson(
-            `${API_BASE_URL}/staging`
-        );
-
-    return json.data || [];
-
+    const result = await getJson('/staging');
+    return result.data || [];
 }
-
 
 export async function getHistory() {
-
-    const json =
-        await getJson(
-            `${API_BASE_URL}/history`
-        );
-
-    return json.data || [];
-
+    const result = await getJson('/history');
+    return result.data || [];
 }
-
 
 export async function checkHealth() {
-
-    return getJson(
-        `${API_BASE_URL}/health`
-    );
-
+    return getJson('/health');
 }
-
 
 export async function runTier1() {
-
-    return getJson(
-        `${API_BASE_URL}/tier1/run`,
-        {
-            method: 'POST',
-
-            headers: {
-                'Content-Type':
-                    'application/json'
-            },
-
-            body: JSON.stringify({})
-        }
-    );
-
+    return getJson('/tier1/run', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    });
 }
-
 
 export async function createStaging(data) {
-
-    return getJson(
-        `${API_BASE_URL}/staging`,
-        {
-            method: 'POST',
-
-            headers: {
-                'Content-Type':
-                    'application/json'
-            },
-
-            body: JSON.stringify(data)
-        }
-    );
-
+    return getJson('/staging', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    });
 }
 
-
 export async function createMaster(data) {
-
-    return getJson(
-        `${API_BASE_URL}/master`,
-        {
-            method: 'POST',
-
-            headers: {
-                'Content-Type':
-                    'application/json'
-            },
-
-            body: JSON.stringify(data)
-        }
-    );
-
+    return getJson('/master', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    });
 }
